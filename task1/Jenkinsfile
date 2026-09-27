@@ -23,7 +23,9 @@ pipeline {
 
         stage('Run Tests & Build') {
             steps {
-                bat 'mvn clean test'
+                dir('task1') {
+                    bat 'mvn clean test'
+                }
             }
         }
 
