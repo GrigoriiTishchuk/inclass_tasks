@@ -6,7 +6,6 @@ pipeline {
     }
 
     environment {
-
         PATH = "C:\\Program Files\\Docker\\Docker\\resources\\bin;${env.PATH}"
         DOCKERHUB_CREDENTIALS_ID = 'ca3e514b-32b9-4ac2-ab59-c733071649c5'
         DOCKERHUB_REPO = 'gregtish/inclass_tasks'
@@ -31,7 +30,9 @@ pipeline {
 
         stage('Generate Coverage Report') {
             steps {
-                bat 'mvn jacoco:report'
+                dir('task1') {
+                    bat 'mvn jacoco:report'
+                }
             }
         }
 
@@ -49,9 +50,11 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    withEnv(['PATH+DOCKER=C:\\Program Files\\Docker\\Docker\\resources\\bin']) {
-                        bat "docker build -t ${DOCKERHUB_REPO}:${DOCKER_IMAGE_TAG} ."
+                dir('task1') {
+                    script {
+                        withEnv(['PATH+DOCKER=C:\\Program Files\\Docker\\Docker\\resources\\bin']) {
+                            bat "docker build -t ${DOCKERHUB_REPO}:${DOCKER_IMAGE_TAG} ."
+                        }
                     }
                 }
             }
