@@ -8,4 +8,4 @@ COPY src ./src
 
 RUN mvn clean package -DskipTests
 
-CMD ["java", "-jar", "target/task1-1.0-SNAPSHOT.jar"]
+CMD ["java", "-cp", "target/task1-1.0-SNAPSHOT.jar", "TemperatureConverter"]
