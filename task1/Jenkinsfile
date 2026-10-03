@@ -13,38 +13,57 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 git branch: 'master', url: 'https://github.com/GrigoriiTishchuk/inclass_tasks.git'
             }
         }
 
+
+
+        stage('Create .env') {
+                    steps {
+                        withCredentials([usernamePassword(credentialsId: 'edujournal-db',
+                                                          usernameVariable: 'DB_USER',
+                                                          passwordVariable: 'DB_PASS')]) {
+                            bat '''
+                                echo DB_HOST=localhost > .env
+                                echo DB_PORT=3306 >> .env
+                                echo DB_NAME=temperature_converter >> .env
+                                echo DB_USERNAME=%DB_USER% >> .env
+                                echo DB_PASSWORD=%DB_PASS% >> .env
+                                echo DB_URL=jdbc:mariadb://localhost:3306/temperature_converter >> .env
+
+                                echo DB_HOST=host.docker.internal > .env.docker
+                                echo DB_PORT=3306 >> .env.docker
+                                echo DB_NAME=temperature_converter >> .env.docker
+                                echo DB_USERNAME=%DB_USER% >> .env.docker
+                                echo DB_PASSWORD=%DB_PASS% >> .env.docker
+                                echo DB_URL=jdbc:mariadb://host.docker.internal:3306/temperature_converter >> .env.docker
+                            '''
+                        }
+                    }
+                }
+
+
+
         stage('Run Tests & Build') {
             steps {
                 dir('task1') {
-                    bat 'mvn clean test'
-                }
-            }
-        }
-
-        stage('Generate Coverage Report') {
-            steps {
-                dir('task1') {
-                    bat 'mvn jacoco:report'
+                    bat 'mvn clean verify'
                 }
             }
         }
 
         stage('Publish Test Results') {
             steps {
-                junit '**/target/surefire-reports/*.xml'
+                junit 'task1/target/surefire-reports/*.xml'
             }
         }
 
         stage('Publish Coverage Report') {
             steps {
-                jacoco()
+                jacoco execPattern: 'task1/target/jacoco.exec'
             }
         }
 
@@ -52,9 +71,7 @@ pipeline {
             steps {
                 dir('task1') {
                     script {
-                        withEnv(['PATH+DOCKER=C:\\Program Files\\Docker\\Docker\\resources\\bin']) {
-                            bat "docker build -t ${DOCKERHUB_REPO}:${DOCKER_IMAGE_TAG} ."
-                        }
+                        bat "docker build -t ${DOCKERHUB_REPO}:${DOCKER_IMAGE_TAG} ."
                     }
                 }
             }
@@ -69,6 +86,5 @@ pipeline {
                 }
             }
         }
-
     }
 }
