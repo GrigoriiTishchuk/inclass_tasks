@@ -23,6 +23,7 @@ pipeline {
 
         stage('Create .env') {
                     steps {
+                    dir('task1') {
                         withCredentials([usernamePassword(credentialsId: 'edujournal-db',
                                                           usernameVariable: 'DB_USER',
                                                           passwordVariable: 'DB_PASS')]) {
@@ -41,6 +42,7 @@ pipeline {
                                 echo DB_PASSWORD=%DB_PASS% >> .env.docker
                                 echo DB_URL=jdbc:mariadb://host.docker.internal:3306/temperature_converter >> .env.docker
                             '''
+                            }
                         }
                     }
                 }
