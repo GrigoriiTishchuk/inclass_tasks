@@ -49,11 +49,17 @@ mvn clean package
 java -jar target/task1-1.0-SNAPSHOT.jar
 ```
 ### Steps to Run via Docker:
-1. Build the Docker image:
+1. Pull the Docker image from Docker Hub:
+```bash
+docker pull gregtish/inclass_tasks:latest
+```
+#### Note: Ensure that Xming is running on your Windows host to allow GUI forwarding.
+
+2. Build the Docker image:
 ```bash
 docker build -t gregtish/inclass_tasks:latest .
 ```
-2. Run the container:
+3. Run the container:
 ```bash
 docker run --rm -it -e DISPLAY=host.docker.internal:0.0 gregtish/inclass_tasks:latest
 ```
