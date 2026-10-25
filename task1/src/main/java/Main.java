@@ -11,15 +11,19 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
+import java.util.ResourceBundle;
 import java.time.format.DateTimeFormatter;
+import java.util.Scanner;
 
 public class Main extends Application {
+    private static ResourceBundle bundle;
+
 
     public static double convertTemperature(double value, String fromUnit, String toUnit) {
         if (fromUnit.equals(toUnit)) {
             return value;
         }
-
         // Переводим исходное значение в Celsius как базовую единицу
         double celsiusValue;
         switch (fromUnit) {
@@ -51,20 +55,21 @@ public class Main extends Application {
 
     @Override
     public void start(Stage stage) {
-        Label unit1Label = new Label("Unit 1:");
+        // All is taken from the resource bundle based on the selected locale
+        Label unit1Label = new Label(bundle.getString("label.unit1"));
         ComboBox<String> unit1ComboBox = new ComboBox<>();
         unit1ComboBox.getItems().addAll("Celsius", "Fahrenheit", "Kelvin");
         unit1ComboBox.setValue("Celsius");
 
-        Label unit2Label = new Label("Unit 2:");
+        Label unit2Label = new Label(bundle.getString("label.unit2"));
         ComboBox<String> unit2ComboBox = new ComboBox<>();
         unit2ComboBox.getItems().addAll("Celsius", "Fahrenheit", "Kelvin");
         unit2ComboBox.setValue("Fahrenheit");
 
-        Label valueLabel = new Label("Value:");
+        Label valueLabel = new Label(bundle.getString("label.value"));
         TextField valueTextField = new TextField();
 
-        Button convertButton = new Button("Convert");
+        Button convertButton = new Button(bundle.getString("btn.convert"));
         Label resultLabel = new Label();
 
         TemperatureUnitDAO unitDAO = new TemperatureUnitDAO();
@@ -73,13 +78,13 @@ public class Main extends Application {
         TableView<TemperatureRecord> historyTable = new TableView<>();
         historyTable.setPrefHeight(250);
 
-        TableColumn<TemperatureRecord, Double> inputColumn = new TableColumn<>("Input");
+        TableColumn<TemperatureRecord, Double> inputColumn = new TableColumn<>(bundle.getString("table.input"));
         inputColumn.setCellValueFactory(new PropertyValueFactory<>("originalValue"));
 
-        TableColumn<TemperatureRecord, Double> resultColumn = new TableColumn<>("Result");
+        TableColumn<TemperatureRecord, Double> resultColumn = new TableColumn<>(bundle.getString("table.result"));
         resultColumn.setCellValueFactory(new PropertyValueFactory<>("convertedValue"));
 
-        TableColumn<TemperatureRecord, LocalDateTime> dateColumn = new TableColumn<>("Date");
+        TableColumn<TemperatureRecord, LocalDateTime> dateColumn = new TableColumn<>(bundle.getString("table.date"));
         dateColumn.setCellValueFactory(new PropertyValueFactory<>("createdAt"));
         dateColumn.setCellFactory(column -> new TableCell<>() {
             @Override
@@ -120,7 +125,7 @@ public class Main extends Application {
                 resultLabel.setText(String.format("%.2f -> %.2f", value, result));
 
             } catch (NumberFormatException ex) {
-                resultLabel.setText("Invalid input");
+                resultLabel.setText(bundle.getString("error.invalid.input"));
             } catch (IllegalArgumentException ex) {
                 resultLabel.setText(ex.getMessage());
             }
@@ -132,18 +137,47 @@ public class Main extends Application {
                 valueLabel, valueTextField,
                 convertButton,
                 resultLabel,
-                new Label("Conversion History:"),
+                new Label(bundle.getString("label.history")),
                 historyTable
         );
         root.setPadding(new Insets(20));
-
         Scene scene = new Scene(root, 600, 500);
-        stage.setTitle("Temperature Converter");
+        stage.setTitle(bundle.getString("app.title"));
         stage.setScene(scene);
         stage.show();
     }
 
     public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Select application language / Valitse kieli / Välj språk / 言語を選択:");
+        System.out.println("1. English (en_US)");
+        System.out.println("2. Finnish (fi_FI)");
+        System.out.println("3. Swedish (sv_SE)");
+        System.out.println("4. Japanese (ja_JP)");
+        System.out.print("Enter choice (1-4): ");
+
+        int choice = 1;
+        try {
+            choice = Integer.parseInt(scanner.nextLine());
+        } catch (Exception ignored) {}
+
+        Locale locale;
+        switch (choice) {
+            case 2:
+                locale = new Locale("fi", "FI");
+                break;
+            case 3:
+                locale = new Locale("sv", "SE");
+                break;
+            case 4:
+                locale = new Locale("ja", "JP");
+                break;
+            default:
+                locale = new Locale("en", "US");
+                break;
+        }
+        bundle = ResourceBundle.getBundle("MessagesBundle", locale);
+        // launch GUI
         launch(args);
     }
 }
