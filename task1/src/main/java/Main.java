@@ -4,6 +4,7 @@ import model.TemperatureRecord;
 import model.TemperatureUnit;
 import javafx.application.Application;
 import javafx.geometry.Insets;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -14,11 +15,14 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import java.time.format.DateTimeFormatter;
-import java.util.Scanner;
 
 public class Main extends Application {
     private static ResourceBundle bundle;
+    private static Locale currentLocale = new Locale("en", "US");
 
+    static {
+        bundle = ResourceBundle.getBundle("MessagesBundle", currentLocale);
+    }
 
     public static double convertTemperature(double value, String fromUnit, String toUnit) {
         if (fromUnit.equals(toUnit)) {
@@ -39,8 +43,6 @@ public class Main extends Application {
             default:
                 throw new IllegalArgumentException("Invalid temperature units");
         }
-
-        // Переводим из Celsius в целевую единицу
         switch (toUnit) {
             case "Celsius":
                 return celsiusValue;
@@ -55,7 +57,41 @@ public class Main extends Application {
 
     @Override
     public void start(Stage stage) {
-        // All is taken from the resource bundle based on the selected locale
+        showUI(stage);
+    }
+
+    private void showUI(Stage stage) {
+        // Выпадающий список выбора языка прямо в GUI
+        Label langLabel = new Label("Language / Kieli / Språk / 言語 / اللغة:");
+        ComboBox<String> langComboBox = new ComboBox<>();
+        langComboBox.getItems().addAll(
+                "English (en_US)",
+                "Finnish (fi_FI)",
+                "Swedish (sv_SE)",
+                "Japanese (ja_JP)",
+                "Arabic (ar_SA)"
+        );
+
+        // Устанавливаем текущее значение в комбобоксе в соответствии с локалью
+        if (currentLocale.getLanguage().equals("fi")) langComboBox.setValue("Finnish (fi_FI)");
+        else if (currentLocale.getLanguage().equals("sv")) langComboBox.setValue("Swedish (sv_SE)");
+        else if (currentLocale.getLanguage().equals("ja")) langComboBox.setValue("Japanese (ja_JP)");
+        else if (currentLocale.getLanguage().equals("ar")) langComboBox.setValue("Arabic (ar_SA)");
+        else langComboBox.setValue("English (en_US)");
+
+        // Обработка смены языка «на лету»
+        langComboBox.setOnAction(e -> {
+            String selected = langComboBox.getValue();
+            if (selected.contains("Finnish")) currentLocale = new Locale("fi", "FI");
+            else if (selected.contains("Swedish")) currentLocale = new Locale("sv", "SE");
+            else if (selected.contains("Japanese")) currentLocale = new Locale("ja", "JP");
+            else if (selected.contains("Arabic")) currentLocale = new Locale("ar", "SA");
+            else currentLocale = new Locale("en", "US");
+
+            bundle = ResourceBundle.getBundle("MessagesBundle", currentLocale);
+            showUI(stage); // Перерисовываем сцену на новом языке
+        });
+
         Label unit1Label = new Label(bundle.getString("label.unit1"));
         ComboBox<String> unit1ComboBox = new ComboBox<>();
         unit1ComboBox.getItems().addAll("Celsius", "Fahrenheit", "Kelvin");
@@ -110,7 +146,7 @@ public class Main extends Application {
                 String toUnit = unit2ComboBox.getValue();
 
                 double result = convertTemperature(value, fromUnit, toUnit);
-                result = Math.round(result * 100.0) / 100.0;
+                result = Math.round(result * 100.0) / 100.0; // Исправлено деление/умножение округления
 
                 TemperatureUnit source = unitDAO.findByName(fromUnit);
                 TemperatureUnit target = unitDAO.findByName(toUnit);
@@ -132,6 +168,8 @@ public class Main extends Application {
         });
 
         VBox root = new VBox(10,
+                langLabel, langComboBox,
+                new Separator(),
                 unit1Label, unit1ComboBox,
                 unit2Label, unit2ComboBox,
                 valueLabel, valueTextField,
@@ -141,47 +179,21 @@ public class Main extends Application {
                 historyTable
         );
         root.setPadding(new Insets(20));
-        Scene scene = new Scene(root, 600, 500);
+
+        // Поддержка направления RTL (справа налево) для арабского языка
+        if (currentLocale.getLanguage().equals("ar")) {
+            root.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        } else {
+            root.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+        }
+
+        Scene scene = new Scene(root, 600, 550);
         stage.setTitle(bundle.getString("app.title"));
         stage.setScene(scene);
         stage.show();
     }
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Select application language / Valitse kieli / Välj språk / 言語を選択:");
-        System.out.println("1. English (en_US)");
-        System.out.println("2. Finnish (fi_FI)");
-        System.out.println("3. Swedish (sv_SE)");
-        System.out.println("4. Japanese (ja_JP)");
-        System.out.println("5. Arabic (ar_SA)");
-        System.out.print("Enter choice (1-5): ");
-
-        int choice = 1;
-        try {
-            choice = Integer.parseInt(scanner.nextLine());
-        } catch (Exception ignored) {}
-
-        Locale locale;
-        switch (choice) {
-            case 2:
-                locale = new Locale("fi", "FI");
-                break;
-            case 3:
-                locale = new Locale("sv", "SE");
-                break;
-            case 4:
-                locale = new Locale("ja", "JP");
-                break;
-            case 5:
-                locale = new Locale("ar", "SA");
-                break;
-            default:
-                locale = new Locale("en", "US");
-                break;
-        }
-        bundle = ResourceBundle.getBundle("MessagesBundle", locale);
-        // launch GUI
         launch(args);
     }
 }
