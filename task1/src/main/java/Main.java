@@ -154,7 +154,8 @@ public class Main extends Application {
         System.out.println("2. Finnish (fi_FI)");
         System.out.println("3. Swedish (sv_SE)");
         System.out.println("4. Japanese (ja_JP)");
-        System.out.print("Enter choice (1-4): ");
+        System.out.println("5. Arabic (ar_SA)");
+        System.out.print("Enter choice (1-5): ");
 
         int choice = 1;
         try {
@@ -171,6 +172,9 @@ public class Main extends Application {
                 break;
             case 4:
                 locale = new Locale("ja", "JP");
+                break;
+            case 5:
+                locale = new Locale("ar", "SA");
                 break;
             default:
                 locale = new Locale("en", "US");
