@@ -25,7 +25,7 @@ spec:
       containers:
         - name: temperature-app
           image: gregtish/inclass_tasks:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           env:
             - name: DB_HOST
               value: "host.minikube.internal"
