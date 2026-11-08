@@ -10,8 +10,10 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import java.time.format.DateTimeFormatter;
@@ -24,31 +26,33 @@ public class Main extends Application {
         bundle = ResourceBundle.getBundle("MessagesBundle", currentLocale);
     }
 
-    public static double convertTemperature(double value, String fromUnit, String toUnit) {
-        if (fromUnit.equals(toUnit)) {
+    public static double convertTemperature(double value, TemperatureUnit fromUnit, TemperatureUnit toUnit) {
+        if (fromUnit.getId() == toUnit.getId()) {
             return value;
         }
-        // Переводим исходное значение в Celsius как базовую единицу
+        String fromSymbol = fromUnit.getSymbol();
+        String toSymbol = toUnit.getSymbol();
+
         double celsiusValue;
-        switch (fromUnit) {
-            case "Celsius":
+        switch (fromSymbol) {
+            case "C":
                 celsiusValue = value;
                 break;
-            case "Fahrenheit":
+            case "F":
                 celsiusValue = TemperatureConverter.fahrenheitToCelsius(value);
                 break;
-            case "Kelvin":
+            case "K":
                 celsiusValue = TemperatureConverter.kelvinToCelsius(value);
                 break;
             default:
                 throw new IllegalArgumentException("Invalid temperature units");
         }
-        switch (toUnit) {
-            case "Celsius":
+        switch (toSymbol) {
+            case "C":
                 return celsiusValue;
-            case "Fahrenheit":
+            case "F":
                 return TemperatureConverter.celsiusToFahrenheit(celsiusValue);
-            case "Kelvin":
+            case "K":
                 return celsiusValue + 273.15;
             default:
                 throw new IllegalArgumentException("Invalid temperature units");
@@ -61,7 +65,6 @@ public class Main extends Application {
     }
 
     private void showUI(Stage stage) {
-        // Выпадающий список выбора языка прямо в GUI
         Label langLabel = new Label("Language / Kieli / Språk / 言語 / اللغة:");
         ComboBox<String> langComboBox = new ComboBox<>();
         langComboBox.getItems().addAll(
@@ -72,14 +75,12 @@ public class Main extends Application {
                 "Arabic (ar_SA)"
         );
 
-        // Устанавливаем текущее значение в комбобоксе в соответствии с локалью
         if (currentLocale.getLanguage().equals("fi")) langComboBox.setValue("Finnish (fi_FI)");
         else if (currentLocale.getLanguage().equals("sv")) langComboBox.setValue("Swedish (sv_SE)");
         else if (currentLocale.getLanguage().equals("ja")) langComboBox.setValue("Japanese (ja_JP)");
         else if (currentLocale.getLanguage().equals("ar")) langComboBox.setValue("Arabic (ar_SA)");
         else langComboBox.setValue("English (en_US)");
 
-        // Обработка смены языка «на лету»
         langComboBox.setOnAction(e -> {
             String selected = langComboBox.getValue();
             if (selected.contains("Finnish")) currentLocale = new Locale("fi", "FI");
@@ -89,27 +90,47 @@ public class Main extends Application {
             else currentLocale = new Locale("en", "US");
 
             bundle = ResourceBundle.getBundle("MessagesBundle", currentLocale);
-            showUI(stage); // Перерисовываем сцену на новом языке
+            showUI(stage);
         });
 
+        TemperatureUnitDAO unitDAO = new TemperatureUnitDAO();
+        TemperatureRecordDAO recordDAO = new TemperatureRecordDAO();
+
+        String langCode = currentLocale.getLanguage();
+        List<TemperatureUnit> availableUnits = unitDAO.findAllByLang(langCode);
+
         Label unit1Label = new Label(bundle.getString("label.unit1"));
-        ComboBox<String> unit1ComboBox = new ComboBox<>();
-        unit1ComboBox.getItems().addAll("Celsius", "Fahrenheit", "Kelvin");
-        unit1ComboBox.setValue("Celsius");
+        ComboBox<TemperatureUnit> unit1ComboBox = new ComboBox<>();
+        unit1ComboBox.getItems().addAll(availableUnits);
+        if (!availableUnits.isEmpty()) unit1ComboBox.setValue(availableUnits.get(0));
+        unit1ComboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(TemperatureUnit unit) {
+                return unit != null ? unit.getName() + " (" + unit.getSymbol() + ")" : "";
+            }
+            @Override
+            public TemperatureUnit fromString(String string) { return null; }
+        });
 
         Label unit2Label = new Label(bundle.getString("label.unit2"));
-        ComboBox<String> unit2ComboBox = new ComboBox<>();
-        unit2ComboBox.getItems().addAll("Celsius", "Fahrenheit", "Kelvin");
-        unit2ComboBox.setValue("Fahrenheit");
+        ComboBox<TemperatureUnit> unit2ComboBox = new ComboBox<>();
+        unit2ComboBox.getItems().addAll(availableUnits);
+        if (availableUnits.size() > 1) unit2ComboBox.setValue(availableUnits.get(1));
+        else if (!availableUnits.isEmpty()) unit2ComboBox.setValue(availableUnits.get(0));
+        unit2ComboBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(TemperatureUnit unit) {
+                return unit != null ? unit.getName() + " (" + unit.getSymbol() + ")" : "";
+            }
+            @Override
+            public TemperatureUnit fromString(String string) { return null; }
+        });
 
         Label valueLabel = new Label(bundle.getString("label.value"));
         TextField valueTextField = new TextField();
 
         Button convertButton = new Button(bundle.getString("btn.convert"));
         Label resultLabel = new Label();
-
-        TemperatureUnitDAO unitDAO = new TemperatureUnitDAO();
-        TemperatureRecordDAO recordDAO = new TemperatureRecordDAO();
 
         TableView<TemperatureRecord> historyTable = new TableView<>();
         historyTable.setPrefHeight(250);
@@ -142,14 +163,11 @@ public class Main extends Application {
         convertButton.setOnAction(e -> {
             try {
                 double value = Double.parseDouble(valueTextField.getText());
-                String fromUnit = unit1ComboBox.getValue();
-                String toUnit = unit2ComboBox.getValue();
+                TemperatureUnit source = unit1ComboBox.getValue();
+                TemperatureUnit target = unit2ComboBox.getValue();
 
-                double result = convertTemperature(value, fromUnit, toUnit);
-                result = Math.round(result * 100.0) / 100.0; // Исправлено деление/умножение округления
-
-                TemperatureUnit source = unitDAO.findByName(fromUnit);
-                TemperatureUnit target = unitDAO.findByName(toUnit);
+                double result = convertTemperature(value, source, target);
+                result = Math.round(result * 100.0) / 100.0;
 
                 if (source != null && target != null) {
                     TemperatureRecord record = new TemperatureRecord(source.getId(), target.getId(), value, result);
@@ -158,7 +176,7 @@ public class Main extends Application {
                     historyTable.getItems().addAll(recordDAO.findAll());
                 }
 
-                resultLabel.setText(String.format("%.2f -> %.2f", value, result));
+                resultLabel.setText(String.format("%.2f %s -> %.2f %s", value, source.getSymbol(), result, target.getSymbol()));
 
             } catch (NumberFormatException ex) {
                 resultLabel.setText(bundle.getString("error.invalid.input"));
@@ -180,7 +198,6 @@ public class Main extends Application {
         );
         root.setPadding(new Insets(20));
 
-        // Поддержка направления RTL (справа налево) для арабского языка
         if (currentLocale.getLanguage().equals("ar")) {
             root.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
         } else {

@@ -63,3 +63,19 @@ docker build -t gregtish/inclass_tasks:latest .
 ```bash
 docker run --rm -it -e DISPLAY=host.docker.internal:0.0 gregtish/inclass_tasks:latest
 ```
+
+## 6. Database Localization Approach 
+
+### Chosen Approach: Translation Table
+For database localization, adopted the **Translation Table** approach (as covered in the course localization strategies), which separates language-neutral base entities from their localized text representations.
+
+#### Schema Implementation:
+- **Base Table (`temperature_unit`)**: Stores non-localized structural attributes (e.g., `id`, `symbol`).
+- **Translation Table (`unit_translation`)**: Stores multi-language attributes linked via foreign key (`unit_id`, `lang`, `name`, `description`).
+- **Measurement History (`temperature_conversion`)**: Persists conversion records referencing the base unit IDs.
+
+#### Justification (Pros & Cons Analysis):
+1. **No Data Redundancy / Clean Normalization:** Non-textual data (such as symbols or relational IDs) is not duplicated across multiple rows or columns.
+2. **Dynamic Language Scalability:** New languages (English, Swedish, Finnish, Japanese, Arabic) can be added instantly by inserting new rows into `unit_translation` without modifying existing database schemas or table architectures.
+3. **Effective Indexing & Fallback:** Allows clean indexing on `(unit_id, lang)` and supports robust query fallback mechanisms (via SQL `COALESCE`) if a specific localized string is missing.
+4. **Industry Standard:** Unlike the *Field* approach (which causes rapid column growth and errors if a column is missing) or the *Table* approach (which requires dynamic runtime table selection), the Translation Table approach represents maintainable enterprise design.
